@@ -2,22 +2,106 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
   <title>Gamot Package Medicine</title>
   <style>
+    :root { --bg: #000; }
+
+    /* Smooth cross-fade when moving between pages on the same site
+       (Chrome, Edge, Safari 18.2+). Add this rule to every page. */
+    @view-transition { navigation: auto; }
+
     html, body {
       margin: 0;
       height: 100%;
-      background: #000; /* change or remove */
+      background: var(--bg);
+      overflow: hidden;
     }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right)
+               env(safe-area-inset-bottom) env(safe-area-inset-left);
+      box-sizing: border-box;
+      opacity: 0;
+      transition: opacity .5s ease;
+    }
+
+    /* Page fades in once loaded, fades out when leaving */
+    body.ready   { opacity: 1; }
+    body.leaving { opacity: 0; transition-duration: .3s; }
+
     img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain; /* whole image visible */
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transform: scale(.97);
+      transition: opacity .6s ease, transform .6s ease;
+    }
+    img.loaded { opacity: 1; transform: scale(1); }
+
+    .error {
+      display: none;
+      color: #fff;
+      font: 1rem/1.5 system-ui, sans-serif;
+      text-align: center;
+      padding: 1.5rem;
+    }
+    .error a { color: #fff; }
+    body.failed img { display: none; }
+    body.failed .error { display: block; }
+
+    /* Respect people who turn off animations */
+    @media (prefers-reduced-motion: reduce) {
+      body, img { transition: none; transform: none; }
     }
   </style>
 </head>
 <body>
-  <img src="/images/Gamot.png" alt="My image">
+  <img
+    id="photo"
+    src="/images/Gamot.png"
+    alt="Gamot Package Medicine screening information"
+    decoding="async"
+    fetchpriority="high"
+  >
+  <p class="error">
+    The image could not be loaded.<br>
+    <a href="">Tap to try again</a>
+  </p>
+
+  <script>
+    const body = document.body;
+    const img  = document.getElementById('photo');
+
+    // Fade the page in, then the image once it has loaded
+    requestAnimationFrame(() => body.classList.add('ready'));
+    const show = () => img.classList.add('loaded');
+    img.complete && img.naturalWidth ? show() : img.addEventListener('load', show);
+    img.addEventListener('error', () => {
+      body.classList.add('failed');
+    });
+
+    // Fade out when clicking a link to another page
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('a[href]');
+      if (!a || a.target === '_blank' || e.metaKey || e.ctrlKey) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin !== location.origin) return;
+      e.preventDefault();
+      body.classList.add('leaving');
+      setTimeout(() => (location.href = a.href), 300);
+    });
+
+    // Restore the page if the user presses Back (browser cache)
+    addEventListener('pageshow', (e) => {
+      if (e.persisted) body.classList.remove('leaving');
+    });
+  </script>
 </body>
 </html>
